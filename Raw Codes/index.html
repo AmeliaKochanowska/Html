@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Czat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+        }
+        .chat-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .chat-message {
+            margin-bottom: 15px;
+        }
+        .chat-message img {
+            max-width: 200px;
+            display: block;
+            margin-top: 5px;
+        }
+        .chat-message iframe {
+            width: 100%;
+            height: 300px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+        }
+        .chat-message pre {
+            background: #f4f4f4;
+            padding: 10px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Przykładowy "chat box" do AI</h2>
+
+<div class="chat-box" id="chatBox"></div>
+
+<div class="form-group">
+    <textarea id="messageInput" rows="2" placeholder="Napisz wiadomość..." style="width: 100%;"></textarea>
+</div>
+<div class="form-group">
+    <input type="file" id="fileInput" accept="*/*">
+</div>
+<div class="form-group">
+    <button id="sendButton">Wyślij</button>
+</div>
+
+<script>
+    const chatBox = document.getElementById("chatBox");
+    const messageInput = document.getElementById("messageInput");
+    const fileInput = document.getElementById("fileInput");
+    const sendButton = document.getElementById("sendButton");
+
+    sendButton.addEventListener("click", () => {
+        const message = messageInput.value.trim();
+        const file = fileInput.files[0];
+
+        if (!message && !file) {
+            alert("Wpisz wiadomość lub dodaj plik.");
+            return;
+        }
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                addMessageToChat(message, e.target.result, file.type);
+                resetInputs();
+            };
+
+            // Odczyt jako tekst dla txt, jako dataURL dla reszty
+            if (file.type === "text/plain") {
+                reader.readAsText(file);
+            } else {
+                reader.readAsDataURL(file);
+            }
+        } else {
+            addMessageToChat(message, null, null);
+            resetInputs();
+        }
+    });
+
+    function addMessageToChat(message, fileContent, fileType) {
+        const msgDiv = document.createElement("div");
+        msgDiv.classList.add("chat-message");
+
+        if (message) {
+            const textDiv = document.createElement("div");
+            textDiv.textContent = message;
+            msgDiv.appendChild(textDiv);
+        }
+
+        if (fileContent) {
+            if (fileType && fileType.startsWith("image/")) {
+                const img = document.createElement("img");
+                img.src = fileContent;
+                msgDiv.appendChild(img);
+            } else if (fileType === "application/pdf") {
+                const iframe = document.createElement("iframe");
+                iframe.src = fileContent;
+                msgDiv.appendChild(iframe);
+            } else if (fileType === "text/plain") {
+                const pre = document.createElement("pre");
+                pre.textContent = fileContent;
+                msgDiv.appendChild(pre);
+            } else {
+                const unsupported = document.createElement("div");
+                unsupported.textContent = "Nieobsługiwany typ pliku.";
+                msgDiv.appendChild(unsupported);
+            }
+        }
+
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function resetInputs() {
+        messageInput.value = "";
+        fileInput.value = "";
+    }
+</script>
+
+</body>
+</html>
