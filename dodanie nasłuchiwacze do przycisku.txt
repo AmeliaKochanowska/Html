@@ -1,0 +1,33 @@
+dodaj do "main.js", pod koniec "initializeUI()" lub na końcu pliku:
+
+if (sendButton) {
+    sendButton.addEventListener('click', async () => {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        const response = await askAI(message);
+        // Dodaj odpowiedź do UI (jeśli masz funkcję np. renderAIResponse)
+        console.log("AI response:", response);
+        chatInput.value = "";
+    });
+}
+
+if (attachButton && fileInput) {
+    attachButton.addEventListener('click', () => {
+        fileInput.click(); // symuluje kliknięcie ukrytego inputa
+    });
+
+    fileInput.addEventListener('change', async () => {
+        const files = fileInput.files;
+        if (files.length > 0) {
+            for (let file of files) {
+                try {
+                    const uploadResult = await uploadFile(file);
+                    console.log("Plik przesłany:", uploadResult);
+                } catch (e) {
+                    console.error("Błąd przesyłania pliku:", e);
+                }
+            }
+        }
+    });
+}

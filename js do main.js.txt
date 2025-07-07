@@ -1,0 +1,56 @@
+function initializeChatControls() {
+    if (sendButton && chatInput) {
+        sendButton.addEventListener('click', async () => {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            try {
+                const response = await askAI(message);
+
+                // Tu możesz dodać funkcję renderującą odpowiedź AI do UI
+                console.log("AI response:", response);
+                showNotification("AI odpowiedziało.", "success"); // Można zamienić na coś lepszego
+
+            } catch (error) {
+                showNotification("Błąd podczas wysyłania wiadomości do AI.", "error");
+            }
+
+            chatInput.value = "";
+        });
+
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendButton.click();
+            }
+        });
+    }
+
+    if (attachButton && fileInput) {
+        attachButton.addEventListener('click', () => {
+            fileInput.click(); // Otwórz dialog wyboru pliku
+        });
+
+        fileInput.addEventListener('change', async () => {
+            const files = fileInput.files;
+            if (files.length > 0) {
+                for (let file of files) {
+                    try {
+                        const uploadResult = await uploadFile(file);
+                        console.log("Plik przesłany:", uploadResult);
+                        showNotification(`Plik ${file.name} przesłany pomyślnie.`, "success");
+
+                        // Jeśli chcesz, tu możesz wywołać funkcję renderującą plik do UI
+
+                    } catch (e) {
+                        console.error("Błąd przesyłania pliku:", e);
+                        showNotification(`Nie udało się przesłać pliku ${file.name}.`, "error");
+                    }
+                }
+
+                // Po przesłaniu plików wyczyść input
+                fileInput.value = '';
+            }
+        });
+    }
+}

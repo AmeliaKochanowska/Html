@@ -1,0 +1,13 @@
+"main.js" posiada gotową funkcję "uploadFile()" (plik: dodanie nasłuchiwaczy...) która wysyła plik do "POST /upload-file"
+
+@app.route('/upload-file', methods=['POST'])
+def upload_file():
+    file = request.files.get('file')
+    thread_id = request.form.get('threadId')
+    category = request.form.get('category', 'general')
+
+    if file:
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        return jsonify({'success': True, 'filename': filename})
+    return jsonify({'success': False, 'error': 'No file provided'}), 400

@@ -1,0 +1,26 @@
+skopiuj  i wklej cały kod pod koniec main.js, np. pod wszystkimi innymi "function. . ."
+
+wywołaj funkcję "initializeChatControls()" wewnątrz "initializeUI()"
+function initalizeUI() 
+initializeChatControls();
+
+jak powinno to wyglądać (w teorii praktycznej):
+
+function initializeUI() {
+    console.log("Inicjalizacja UI po zalogowaniu");
+    
+    updateUserInfoUI();
+    applyPlanRestrictions();
+    
+    if (progressBar && progressPercentage) {
+        updateProgress();
+    }
+
+    if (!currentCategory) {
+        if (initialView) initialView.style.display = 'flex';
+        if (chatContainer) chatContainer.style.display = 'none';
+        if (mainInputContainer) mainInputContainer.style.display = 'block';
+    }
+
+ (To dodajesz na koniec:)
+    initializeChatControls();
