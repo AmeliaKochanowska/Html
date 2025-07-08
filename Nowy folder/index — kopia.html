@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deckster AI Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Dodatkowe style dla nowych elementów */
+        .plan-badge {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: #2e7d32;
+            color: white;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            z-index: 1;
+        }
+        
+        .avatar-container {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e8ecee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        
+        .avatar-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .avatar-placeholder {
+            font-size: 16px;
+            font-weight: 600;
+            color: #465b5e;
+        }
+        
+        /* Wyśrodkowanie paska postępu */
+        .progress-container {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            max-width: 600px;
+            text-align: center;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+/* Plan badges styles - DODAJ TO TUTAJ */
+.plan-badge {
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.plan-badge.beta-free {
+    background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+    color: white;
+}
+
+.plan-badge.coming-soon {
+    background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+    color: white;
+}
+
+/* Disabled plan styling */
+.plan-card.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.plan-card.disabled::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(158, 158, 158, 0.3);
+    border-radius: 16px;
+    z-index: 5;
+}
+
+.plan-card.disabled .btn {
+    background: #bdbdbd;
+    cursor: not-allowed;
+}
+
+.plan-card.disabled .btn:hover {
+    background: #bdbdbd;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Modal for Human Intelligence plan */
+.human-intelligence-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.human-intelligence-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.human-intelligence-content {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.human-intelligence-modal.show .human-intelligence-content {
+    transform: scale(1);
+}
+
+.human-intelligence-content h3 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: #1e2933;
+}
+
+.human-intelligence-content p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    color: #333;
+}
+
+.human-intelligence-content .contact-email {
+    background: #f0f7ff;
+    border: 2px solid #4285f4;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 24px 0;
+    font-weight: 600;
+    color: #1565c0;
+}
+
+.human-intelligence-content .close-btn {
+    background: #465b5e;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.3s ease;
+}
+
+.human-intelligence-content .close-btn:hover {
+    background: #576b70;
+}   
+    </style>
+</head>
+<body{% if dev_mode %} class="dev-mode"{% endif %}>
+    {% if openai_error %}
+    <div style="background-color:#f8d7da;color:#721c24;padding:10px;margin:10px;border:1px solid #f5c2c7;">
+        {{ openai_error }}
+    </div>
+    {% endif %}
+    
+    <!-- Mobile hamburger menu -->
+    <div class="mobile-header">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="mobile-logo">
+            <img src="https://www.alldeck.pl/wp-content/uploads/2025/04/alldeck-logo-czarne-60x60-2.png" alt="Deckster">
+        </div>
+        <button class="mobile-user-btn" id="mobileUserBtn" aria-label="User menu">
+            <i class="fas fa-user"></i>
+        </button>
+    </div>
+
+    <!-- Mobile overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen">
+        <div>
+            <img src="https://www.alldeck.pl/wp-content/uploads/2025/04/alldeck-logo-czarne-60x60-2.png" 
+                 alt="Deckster AI Logo" 
+                 class="login-logo"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div class="logo-fallback" style="display: none;">D</div>
+            <h1 class="login-title">Sign in to Deckster AI</h1>
+            <p class="login-subtitle">Continue to access your AI assistant</p>
+            
+            <a href="/login" class="login-btn" id="loginBtn">Sign in</a>
+
+            <div class="login-footer">
+                <p>Don't have an account? <a href="/signup" id="registerLink" class="login-link">Sign up</a></p>
+
+            </div>
+        </div>
+    </div>
+    
+    <!-- Intro Section -->
+    <div id="introSection">
+        <div class="intro-container">
+            <div class="back-button-container" style="text-align: left; margin-bottom: 20px;">
+                <button id="backToAppFromIntroBtn" class="back-to-app-btn">
+                    <i class="fas fa-arrow-left"></i> Back to App
+                </button>
+            </div>
+            
+            <div class="header">
+                <img src="https://www.alldeck.pl/wp-content/uploads/2025/04/alldeck-logo-czarne-60x60-2.png" alt="Deckster AI Logo" class="logo">
+                <h1>Hi! I'm Deckster – Your AI-powered Pitch Deck Assistant 🚀</h1>
+            </div>
+            
+            <div class="intro-text">
+                <p>If you have an important project, idea, or offer but are unsure how to present it in the best way – don't worry, I've got it under control! 😊</p>
+                <br>
+                <p>I'm here for you 24/7 to help you create a pitch deck that will convince your audience and showcase the true value of what you want to communicate. Without unnecessary complications – I'll guide you step-by-step through the entire process.</p>
+            </div>
+            
+            <div class="plans-container">
+                <!-- Plan 1 - AI Deck Builder -->
+                <div class="plan-card" data-plan-id="1">
+                    <div class="plan-badge beta-free">Beta Access – Free!</div>
+                    <div class="plan-title">AI Deck Builder</div>
+                    <div class="plan-price">147 EUR <span class="period">/ 3 months</span></div>
+                    <div class="plan-features">
+                        <ul>
+                            <li>Step-by-step guidance through 12 key topics</li>
+                            <li>Unlimited Q&A to refine your brief</li>
+                            <li>Professional DOC document with slide content</li>
+                            <li>Personalized storytelling suggestions</li>
+                        </ul>
+                    </div>
+                    <button class="btn plan-select-btn" data-plan="1">Get Started</button>
+                </div>
+    
+                <!-- Plan 2 - AI Deck Pro (DISABLED) -->
+                <div class="plan-card disabled" data-plan-id="2">
+                    <div class="plan-badge coming-soon">Available Soon</div>
+                    <div class="plan-title">AI Deck Pro</div>
+                    <div class="plan-price">297 EUR <span class="period">/ 3 months</span></div>
+                    <div class="plan-features">
+                        <ul>
+                            <li>Everything in AI Deck Builder</li>
+                            <li>Automated presentation generation in Gamma.app</li>
+                            <li>Pre-formatted design and layouts</li>
+                            <li>Customizable templates in Gamma.app</li>
+                        </ul>
+                    </div>
+                    <button class="btn plan-select-btn" data-plan="2" disabled>Coming Soon</button>
+                </div>
+    
+                <!-- Plan 3 - Human Intelligence -->
+                <div class="plan-card" data-plan-id="3">
+                    <div class="plan-title">Human Intelligence Precision</div>
+                    <div class="plan-price">5000 EUR<span class="period">+</span></div>
+                    <div class="plan-features">
+                        <ul>
+                            <li>Expert business model analysis</li>
+                            <li>Tailor-made pitch deck design</li>
+                            <li>Mentoring and feedback from industry experts</li>
+                            <li>Price depends on project complexity</li>
+                        </ul>
+                    </div>
+                    <button class="btn plan-select-btn" data-plan="3">Get Started</button>
+                </div>
+            </div>
+<div class="detailed-info">
+                <p>Whether you're preparing a presentation for investors, clients, management, or your team – together we'll tell your story in a clear, convincing, and professional manner. We'll build a solid brief and even help you create a ready-to-use presentation. How does it work? Let me explain!</p>
+                
+                <h2 class="section-title">Choose the package that's perfect for you!</h2>
+                
+                <!-- Detailed Plan 1 -->
+                <div class="detailed-plan">
+                    <h3>1. AI Deck Builder <span class="price">147 EUR / 3 months</span></h3>
+                    <div class="plan-content">
+                        <p>If you prefer to create the content of your pitch deck on your own but need some guidance, this is the ideal solution for you.</p>
+                        <p>I'll walk you through 12 key topics essential for a great pitch deck: from the company's purpose to competitive analysis and finances.</p>
+                        <p>I'll ask simple, straightforward questions, and you respond – together we'll build a clear brief.</p>
+                        <p>No question limit! You can explore each topic as long as you need to make everything crystal clear.</p>
+                        
+                        <p class="feature-title"><strong>What will you get?</strong></p>
+                        <p>A professional DOC document with ready-to-use content for each slide, which you can later use however you like.</p>
+                        <p class="bonus">Access to personalized storytelling suggestions that will help you narrate your startup's story in a more compelling and engaging way. This ensures your pitch deck not only contains key information but also inspires investors to take action.</p>
+                    </div>
+                </div>
+                
+                <!-- Detailed Plan 2 -->
+                <div class="detailed-plan">
+                    <h3>2. AI Deck Pro <span class="price">297 EUR / 3 months</span></h3>
+                    <div class="plan-content">
+                        <p>The same support as in the AI Deck Builder, but with extra magic: after developing the content, I'll automatically generate a ready-made presentation for you in Gamma.app.</p>
+                        <p>No need to worry about formatting or graphic layout – everything is already prepared.</p>
+                        <p>Perfect for those who want to save time and focus on what really matters – pitching to investors.</p>
+                        
+                        <p class="feature-title"><strong>What will you get?</strong></p>
+                        <p>A ready-to-use presentation created in the professional tool Gamma.app.</p>
+                        <p class="bonus">The ability to customize templates in Gamma.app – choose from several professional layouts and adjust them to your needs.</p>
+                    </div>
+                </div>
+                
+                <!-- Detailed Plan 3 -->
+                <div class="detailed-plan">
+                    <h3>3. Human Intelligence Precision <span class="price">5000 EUR+</span></h3>
+                    <div class="plan-content">
+                        <p>If you're looking for maximum precision and professionalism, this is the solution for you.</p>
+                        <p>Our team of experts will analyze your data, thoroughly discuss your business model, and design a pitch deck perfectly tailored to your needs.</p>
+                        <p>The price is flexible and depends on the scope of work, number of slides, and the complexity of the project.</p>
+                    </div>
+                </div>
+                
+                <h3 class="section-title">How to Work with Me? It's Easy!</h3>
+                
+                <div class="how-it-works">
+                    <p>The process is very intuitive and user-friendly. Here's how it works:</p>
+                    
+                    <div class="steps-container">
+                        <div class="step-item">
+                            <span class="step-number">1</span>
+                            <div class="step-content">Log in to our platform.</div>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">2</span>
+                            <div class="step-content">Choose the package that best suits your needs.</div>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">3</span>
+                            <div class="step-content">Go straight to the assistant – this is where the real fun begins!</div>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">4</span>
+                            <div class="step-content">On the left side of the screen, you'll find a menu with 12 key topics that are essential for creating an outstanding pitch deck. You can select them in any order, and I'll ask you simple, straightforward questions to help you build a clear brief.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="practical-example" style="border-left: 4px solid #2e7d32;">
+                        <h4>How it works in practice:</h4>
+                        <p>For example, if you select <span class="highlight">Problem</span>, I'll ask you about the main challenges your customers face, their current solutions, and how your company can help them. Based on your answers, I'll provide you with ready-to-use phrasing that you can incorporate into your deck.</p>
+                    </div>
+                    
+                    <p class="conclusion-text">It's that simple! Let's get started. 😊</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="profile-section" style="display: flex; align-items: center; justify-content: flex-start; padding-left: 16px;">
+                <div class="avatar-container" id="userAvatar">
+                    <!-- Jeśli użytkownik ma zdjęcie, pokaż je -->
+                    <!-- <img src="url_do_zdjecia" alt="User Avatar"> -->
+                    <!-- W przeciwnym razie pokaż inicjały -->
+                    <div class="avatar-placeholder">JF</div>
+                </div>
+                <div class="profile-info" style="text-align: left;">
+                    <div style="font-weight: 600; font-size: 14px;" id="userDisplayName">Jarosław Frankowski</div>
+                    <div class="plan-button" style="display: inline-flex; align-items: center; margin-top: 4px; background-color: #f5f7f8; padding: 2px 8px; border-radius: 12px; font-size: 11px; cursor: pointer;" id="userPlanButton">
+                        <i class="fas fa-star" style="font-size: 10px; margin-right: 4px; color: #2e7d32;"></i>
+                        <span id="selectedPlanBadge" style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden; color: #333333;">Deckster Free</span>
+                    </div>
+                </div>
+                <div style="margin-left: auto; cursor: pointer; padding-right: 12px;" id="profileToggle">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            
+            <!-- User dropdown menu -->
+            <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-section">
+                    <div class="dropdown-item" id="settingsMenuItem">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </div>
+                </div>
+                
+                <div class="dropdown-section">
+                    <div class="dropdown-item" id="contactMenuItem">
+                        <i class="fas fa-address-card"></i>
+                        <span>Contact</span>
+                        <i class="fas fa-chevron-right" style="margin-left: auto;"></i>
+                    </div>
+                    <div id="contactSubmenu" style="display: none; padding: 12px; margin-top: 8px; background: #f5f7f8; border-radius: 4px; font-size: 13px;">
+                        <div style="margin-bottom: 6px;"><strong>Email:</strong> <a href="mailto:open@qadrum.com" style="color: #465b5e; text-decoration: none;">open@qadrum.com</a></div>
+                        <div style="margin-bottom: 4px;">Deckster is a brand owned by Qadrum Sp. z o.o.</div>
+                        <div style="margin-bottom: 4px;">Jana Czeczota 31</div>
+                        <div style="margin-bottom: 4px;">02-607 Warsaw</div>
+                        <div>NIP: 7262661551</div>
+                    </div>
+                </div>
+                
+                <div class="dropdown-section">
+                    <div class="dropdown-item" id="shareMenuItem">
+                        <i class="fas fa-share-alt"></i>
+                        <span>Share Deckster</span>
+                    </div>
+                </div>
+                
+                <div class="dropdown-section">
+                    <div class="dropdown-item" id="introMenuItem">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Intro</span>
+                    </div>
+                </div>
+                
+                <div class="dropdown-section">
+                    <div class="dropdown-item logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Log Out</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <div class="new-chat-btn" style="text-align: left; padding-left: 16px; display: flex; align-items: center;">
+                    <i class="fas fa-plus" style="margin-right: 8px;"></i>
+                    <span>New chat</span>
+                </div>
+                
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Search">
+                </div>
+                
+                <div class="upgrade-btn">
+                    <i class="fas fa-star" style="margin-right: 8px;"></i>
+                    Upgrade to Deckster Pro
+                </div>
+            </div>
+            
+            <div>
+                <div class="categories-header">
+                    <span>Categories</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                
+                <div class="category-list">
+                    <div class="category-item" data-category="Company Purpose">Company Purpose</div>
+                    <div class="category-item" data-category="Problem">Problem</div>
+                    <div class="category-item" data-category="Solution">Solution</div>
+                    <div class="category-item" data-category="Why Now">Why Now</div>
+                    <div class="category-item" data-category="Market Size">Market Size</div>
+                    <div class="category-item" data-category="Competition">Competition</div>
+                    <div class="category-item" data-category="Product">Product</div>
+                    <div class="category-item" data-category="Business Model">Business Model</div>
+                    <div class="category-item" data-category="Team Founders & Management">Team Founders & Management</div>
+                    <div class="category-item" data-category="Financials">Financials</div>
+                    <div class="category-item" data-category="The Deal">The Deal</div>
+                    <div class="category-item" data-category="Deckster & Customer Care">Deckster & Customer Care</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 8px;">
+                <div class="categories-header">
+                    <span>History</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="category-list history-list">
+                    <!-- Sekcja historii będzie wypełniana dynamicznie przez JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Progress bar -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-text">You are <span id="progressPercentage">0%</span> of the way to a complete pitch deck with Deckster!</div>
+                <div class="progress-bar-outer">
+                    <div class="progress-bar-inner" id="progressBar" style="width: 0%;"></div>
+                </div>
+            </div>
+            
+            <!-- Initial view with centered logo -->
+            <div class="initial-view" id="initialView">
+                <img src="https://www.alldeck.pl/wp-content/uploads/2025/04/alldeck-logo-czarne-60x60-2.png" 
+                    alt="Deckster AI Logo" 
+                    class="main-logo"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="logo-fallback main-logo" style="display: none;">D</div>
+            </div>
+            
+            <div class="chat-container" id="chatContainer" style="display: none;">
+                <!-- Tu będą dynamicznie dodawane wiadomości -->
+            </div>
+            
+            <!-- Export modal -->
+            <div class="export-modal" id="exportModal">
+                <div class="export-modal-content">
+                    <div class="export-modal-header">
+                        <div class="export-modal-title">Add to Pitch Deck</div>
+                        <button class="export-modal-close" id="closeModalBtn">&times;</button>
+                    </div>
+                    
+                    <div class="export-section-list">
+                        <div class="export-section-item">Company Purpose</div>
+                        <div class="export-section-item">Problem</div>
+                        <div class="export-section-item">Solution</div>
+                        <div class="export-section-item">Why Now</div>
+                        <div class="export-section-item">Market Size</div>
+                        <div class="export-section-item">Competition</div>
+                        <div class="export-section-item">Product</div>
+                        <div class="export-section-item selected">Business Model</div>
+                        <div class="export-section-item">Team & Management</div>
+                        <div class="export-section-item">Financials</div>
+                        <div class="export-section-item">The Deal</div>
+                    </div>
+                    
+                    <div class="export-buttons">
+                        <button class="export-cancel" id="cancelExportBtn">Cancel</button>
+                        <button class="export-confirm" id="confirmExportBtn">Add to Deck</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- File upload container -->
+            <div class="file-upload-container" id="fileUploadContainer">
+                <div class="file-upload-area" id="dropArea">
+                    <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                    <div class="file-upload-text">
+                        <div><strong>Drag and drop files here</strong></div>
+                        <div>or click to browse</div>
+                    </div>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                </div>
+                
+                <div class="file-upload-list" id="fileList">
+                    <!-- File items will be added here dynamically -->
+                </div>
+            </div>
+            
+            <!-- File Preview Modal -->
+            <div id="filePreviewModal" class="file-preview-modal">
+                <div class="file-preview-container">
+                    <div class="file-preview-header">
+                        <div class="file-preview-title" id="previewFileName">File Preview</div>
+                        <button id="closeFilePreviewBtn" class="file-preview-close">&times;</button>
+                    </div>
+                    <div class="file-preview-content" id="filePreviewContent">
+                        <!-- Content will be loaded here -->
+                    </div>
+                    <div class="file-preview-actions">
+                        <button id="downloadPreviewedFileBtn" class="file-preview-download">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input container for chat view -->
+            <div class="input-container">
+                <div class="input-box">
+                    <textarea class="chat-input" placeholder="Ask Deckster AI about your pitch deck..."></textarea>
+                    <div style="padding: 0 8px; color: #5a686b; cursor: pointer;" id="attachButton">
+                        <i class="fas fa-paperclip"></i>
+                    </div>
+                    <div style="padding: 0 8px; color: #465b5e; cursor: pointer;" id="sendButton">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                </div>
+                
+                <div class="tools-bar">
+                    <div class="tools-button">
+                        <i class="fas fa-tools" style="margin-right: 8px;"></i>
+                        Tools
+                    </div>
+                    <div style="color: #5a686b; padding: 6px 12px; cursor: pointer;">
+                        <i class="fas fa-keyboard"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input container for main view -->
+            <div class="input-container" id="mainInputContainer" style="position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 800px; background: white; border: 1px solid #a8b5b7; border-radius: 8px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); margin: 0 auto; display: none;">
+                <div class="input-box">
+                    <textarea class="chat-input" id="mainChatInput" placeholder="Hi! I'm Deckster, your AI pitch deck assistant. How can I help you today?"></textarea>
+                    <div style="padding: 0 8px; color: #5a686b; cursor: pointer;" id="mainAttachButton">
+                        <i class="fas fa-paperclip"></i>
+                    </div>
+                    <div style="padding: 0 8px; color: #465b5e; cursor: pointer;" id="mainSendButton">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                </div>
+                
+                <div class="tools-bar">
+                    <div class="tools-button" id="mainToolsButton">
+                        <i class="fas fa-tools" style="margin-right: 8px;"></i>
+                        Tools
+                    </div>
+                    <div style="color: #5a686b; padding: 6px 12px; cursor: pointer;">
+                        <i class="fas fa-keyboard"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Page -->
+<div id="settingsPage" class="settings-page">
+    <div class="settings-header">
+        <button id="backToMainBtn" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <h2>Settings</h2>
+    </div>
+
+<div class="settings-content">
+        <div class="settings-section">
+            <h3>Account Settings</h3>
+            
+            <div class="settings-item">
+                <div class="settings-item-header">
+                    <span>Email Address</span>
+                    <span id="currentEmailValue" class="settings-value">jaroslaw.frankowski@example.com</span>
+                </div>
+                <button id="changeEmailBtn" class="settings-edit-btn">Change</button>
+            </div>
+            
+            <div class="settings-item">
+                <div class="settings-item-header">
+                    <span>Password</span>
+                    <span class="settings-value">••••••••</span>
+                </div>
+                <button id="changePasswordBtn" class="settings-edit-btn">Change</button>
+            </div>
+            
+            <div class="settings-item">
+                <div class="settings-item-header">
+                    <span>Profile Name</span>
+                    <span id="currentProfileName" class="settings-value">Jarosław Frankowski</span>
+                </div>
+                <button id="editProfileNameBtn" class="settings-edit-btn">Edit</button>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>Preferences</h3>
+            
+            <div class="settings-item checkbox-item">
+                <div class="settings-item-header">
+                    <span>Email Notifications</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="emailNotifyToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h3>Data & Privacy</h3>
+            
+            <div class="settings-item">
+                <div class="settings-item-header">
+                    <span>Export Account Data</span>
+                </div>
+                <button id="exportDataBtn" class="settings-edit-btn">Export</button>
+            </div>
+            
+            <div class="settings-item">
+                <div class="settings-item-header">
+                    <span>Delete Account</span>
+                </div>
+                <button id="deleteAccountBtn" class="settings-danger-btn">Delete</button>
+            </div>
+        </div>
+            <div class="settings-footer">
+            <p class="made-with-love">
+                Made with <span class="heart">♥</span> by 
+                <a href="https://eyepi.ai/" target="_blank" class="eyepi-link">Eyepi.ai</a>
+            </p>
+        </div>
+    </div>
+</div>
+    
+    <!-- Password Reset Modal -->
+    <div id="passwordResetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+                <button class="modal-close" id="closeResetModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Enter your email address. We'll send you a link to reset your password.</p>
+                <form id="passwordResetForm">
+                    <div class="form-group">
+                        <label for="resetEmail">Email Address</label>
+                        <input type="email" id="resetEmail" class="form-input" value="jaroslaw.frankowski@example.com" required>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" id="cancelResetBtn">Cancel</button>
+                        <button type="submit" class="submit-btn">Send Reset Link</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal (new) -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="modal-close" id="closeChangePasswordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-input" required>
+                        <div class="password-match-indicator" id="passwordMatchIndicator"></div>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" id="cancelChangePasswordBtn">Cancel</button>
+                        <button type="submit" class="submit-btn">Update Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal (for reset link sent) -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Link Sent</h3>
+                <button class="modal-close" id="closeConfirmModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confirmation-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p>A password reset link has been sent to your email address. The link will expire in 24 hours.</p>
+                <div class="form-buttons">
+                    <button class="submit-btn" id="confirmOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Saved Content Panel -->
+    <div id="savedContentPanel" class="saved-content-panel">
+        <div class="saved-content-header">
+            <h3>Saved Content for Pitch Deck</h3>
+            <button id="closeSavedContentBtn" class="saved-content-close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="saved-content-sections">
+            <!-- Ta sekcja będzie wypełniana dynamicznie przez JavaScript -->
+        </div>
+        
+        <div class="saved-content-actions">
+            <button id="downloadPitchDeckBtn" class="download-deck-btn">
+                <i class="fas fa-file-download"></i>
+                Download Pitch Deck
+            </button>
+            <button id="generatePresentationBtn" class="download-deck-btn" style="display:none; margin-top:8px;">
+                <i class="fas fa-play"></i>
+                Generate Presentation
+            </button>
+        </div>
+    </div>
+
+<!-- User Files Panel -->
+   <div id="userFilesPanel" class="user-files-panel">
+       <div class="user-files-header">
+           <h3>Your Files</h3>
+           <button id="closeUserFilesBtn" class="user-files-close-btn">
+               <i class="fas fa-times"></i>
+           </button>
+       </div>
+       
+       <div class="user-files-content">
+           <div class="user-files-list">
+               <!-- Pliki będą tutaj wstawiane dynamicznie przez JavaScript -->
+               <div class="user-files-empty">
+                   No files uploaded yet. Click the paperclip icon to upload files.
+               </div>
+           </div>
+       </div>
+       
+       <div class="user-files-actions">
+           <button id="uploadNewFileBtn" class="upload-new-file-btn">
+               <i class="fas fa-file-upload"></i>
+               Upload New File
+           </button>
+       </div>
+   </div>
+
+   <!-- Web Search Modal -->
+   <div id="webSearchModal" class="modal">
+       <div class="modal-content web-search-modal">
+           <div class="modal-header">
+               <h3>Web Search</h3>
+               <button class="modal-close" id="closeWebSearchModal">&times;</button>
+           </div>
+           <div class="modal-body">
+               <div class="web-search-field">
+<input type="text" id="webSearchInput" class="web-search-input" placeholder="Search the web...">
+<button id="runWebSearchBtn" class="web-search-button">
+                       <i class="fas fa-search"></i>
+                   </button>
+               </div>
+               <div id="webSearchResults" class="web-search-results">
+                   <!-- Results will be loaded here -->
+               </div>
+               <div id="webSearchLoading" class="web-search-loading" style="display: none;">
+                   <div class="loading-animation">
+                       <span class="loading-dot"></span>
+                       <span class="loading-dot"></span>
+                       <span class="loading-dot"></span>
+                   </div>
+               </div>
+           </div>
+       </div>
+   </div>
+
+<!-- View Files Button - nowa struktura z wrapperem -->
+<div class="files-button-wrapper">
+   <button id="viewUserFilesBtn" class="view-user-files-btn">
+       <i class="fas fa-folder"></i>
+   </button>
+   <span id="filesBadge" class="files-badge" style="display: none;">0</span>
+</div>
+   
+   <!-- View Saved Content Button (dodane w main.js) -->
+
+   <!-- URL Analysis Modal -->
+   <div id="urlAnalysisModal" class="modal">
+       <div class="modal-content web-search-modal">
+           <div class="modal-header">
+               <h3>Analyze URL</h3>
+               <button class="modal-close" id="closeUrlAnalysisModal">&times;</button>
+           </div><div class="modal-body">
+              <div class="web-search-field">
+                  <input type="text" id="urlInput" class="web-search-input" placeholder="Enter URL to analyze (e.g. https://example.com)">
+                  <button id="analyzeUrlBtn" class="web-search-button">
+                      <i class="fas fa-search"></i>
+                  </button>
+              </div>
+              <div id="urlAnalysisResults" class="web-search-results">
+                  <!-- Results will be loaded here -->
+              </div>
+              <div id="urlAnalysisLoading" class="web-search-loading" style="display: none;">
+                  <div class="loading-animation">
+                      <span class="loading-dot"></span>
+                      <span class="loading-dot"></span>
+                      <span class="loading-dot"></span>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div id="shareModal" class="modal">
+      <div class="modal-content">
+          <div class="modal-header">
+              <h3>Share Deckster AI</h3>
+              <button class="modal-close" id="closeShareModal">&times;</button>
+          </div>
+          <div class="modal-body">
+              <p>Share Deckster AI with your colleagues or friends. They will have access to the agent with your customized settings.</p>
+              
+              <div class="share-options">
+                  <div class="share-option-item">
+                      <input type="radio" id="shareReadOnly" name="shareOption" value="readonly" checked>
+                      <label for="shareReadOnly">
+                          <div class="share-option-title">Read-only</div>
+                          <div class="share-option-desc">They can view conversations but can't create new ones</div>
+                      </label>
+                  </div>
+                  <div class="share-option-item">
+                      <input type="radio" id="shareCollaborate" name="shareOption" value="collaborate">
+                      <label for="shareCollaborate">
+                          <div class="share-option-title">Collaborate</div>
+                          <div class="share-option-desc">They can view and create conversations</div>
+                      </label>
+                  </div>
+              </div>
+              
+              <div class="share-link-container">
+                  <div class="share-link-label">Share link</div>
+                  <div class="share-link-field">
+                      <input type="text" id="shareLinkInput" class="share-link-input" value="https://deckster.ai/share/abc123" readonly>
+                      <button id="copyShareLinkBtn" class="share-link-copy">
+                          <i class="fas fa-copy"></i>
+                      </button>
+                  </div>
+              </div>
+              
+              <div class="share-buttons">
+                  <button id="generateNewLinkBtn" class="share-btn generate-link">
+                      <i class="fas fa-sync-alt"></i>
+                      Generate New Link
+                  </button>
+                  <button id="shareViaEmailBtn" class="share-btn share-email">
+                      <i class="fas fa-envelope"></i>
+                      Share via Email
+                  </button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Upgrade Plan Modal -->
+  <div id="upgradePlanModal" class="modal">
+      <div class="modal-content upgrade-plan-modal">
+          <div class="modal-header">
+              <h3>Upgrade Your Plan</h3>
+              <button class="modal-close" id="closeUpgradePlanModal">&times;</button>
+          </div>
+          <div class="modal-body">
+              <p>Choose a plan that fits your needs. All plans include access to Deckster AI and its features.</p>
+              
+              <div class="upgrade-plans">
+                  <!-- AI Deck Builder Plan -->
+                  <div class="upgrade-plan-item" data-plan-id="1" style="position: relative; padding-top: 24px;">
+                      <div class="plan-badge beta-free">Beta Access – Free!</div>
+                      <div class="plan-header">
+                          <div class="plan-name">AI Deck Builder</div>
+                          <div class="plan-price">147 EUR<span>/3 months</span></div>
+                      </div>
+                      <div class="plan-features">
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Step-by-step guidance through 12 key topics</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Unlimited Q&A to refine your brief</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Professional DOC document with slide content</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Personalized storytelling suggestions</span>
+                          </div>
+                      </div>
+                      <div class="plan-cta">
+                          <button class="plan-select-btn current-plan" data-plan="1">Current Plan</button>
+                      </div>
+                  </div>
+    
+                  <!-- AI Deck Pro Plan (DISABLED) -->
+                  <div class="upgrade-plan-item disabled" data-plan-id="2" style="position: relative; padding-top: 24px;">
+                      <div class="plan-badge coming-soon">Available Soon</div>
+                      <div class="plan-header">
+                          <div class="plan-name">AI Deck Pro</div>
+                          <div class="plan-price">297 EUR<span>/3 months</span></div>
+                      </div>
+                      <div class="plan-features">
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Everything in AI Deck Builder</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Automated presentation generation in Gamma.app</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Pre-formatted design and layouts</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Customizable templates in Gamma.app</span>
+                          </div>
+                      </div>
+                      <div class="plan-cta">
+                          <button class="plan-select-btn" data-plan="2" disabled>Coming Soon</button>
+                      </div>
+                  </div>
+    
+                  <!-- Human Intelligence Precision Plan -->
+                  <div class="upgrade-plan-item" data-plan-id="3" style="position: relative; padding-top: 24px;">
+                      <div class="plan-header">
+                          <div class="plan-name">Human Intelligence Precision</div>
+                          <div class="plan-price">5000 EUR<span>+</span></div>
+                      </div>
+                      <div class="plan-features">
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Expert business model analysis</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Tailor-made pitch deck design</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Mentoring and feedback from industry experts</span>
+                          </div>
+                          <div class="plan-feature">
+                              <i class="fas fa-check"></i>
+                              <span>Price depends on project complexity</span>
+                          </div>
+                      </div>
+                      <div class="plan-cta">
+                          <button class="plan-select-btn" data-plan="3">Contact Us</button>
+                      </div>
+                  </div>
+              </div>
+              
+    <!-- Avatar Management Modal -->
+<div id="avatarModal" class="modal">
+    <div class="modal-content avatar-modal">
+        <div class="modal-header">
+            <h3>Manage Avatar</h3>
+            <button class="modal-close" id="closeAvatarModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="avatar-preview-section">
+                <div class="avatar-preview-container">
+                    <div class="avatar-preview" id="avatarPreview">
+                        <div class="avatar-placeholder" id="avatarPreviewPlaceholder">JF</div>
+                    </div>
+                </div>
+                <p class="avatar-preview-label">Current Avatar</p>
+            </div>
+            
+            <div class="avatar-actions">
+                <button id="uploadAvatarBtn" class="avatar-action-btn primary">
+                    <i class="fas fa-upload"></i>
+                    Upload New Photo
+                </button>
+                <button id="removeAvatarBtn" class="avatar-action-btn secondary">
+                    <i class="fas fa-trash-alt"></i>
+                    Remove Avatar
+                </button>
+            </div>
+            
+            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+            
+            <div class="avatar-upload-info">
+                <p><small>Recommended: Square image, at least 200x200px, max 5MB</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Human Intelligence Modal -->
+<div id="humanIntelligenceModal" class="human-intelligence-modal">
+    <div class="human-intelligence-content">
+        <div class="modal-header">
+            <button class="modal-close" id="closeHumanIntelligenceModal">&times;</button>
+        </div>
+        <h3>Human Intelligence Precision</h3>
+        <p>If you're looking for maximum precision and professionalism, this is the solution for you.</p>
+        <p>Our team of experts will analyze your data, thoroughly discuss your business model, and design a pitch deck perfectly tailored to your needs.</p>
+        <p>The price is flexible and depends on the scope of work, number of slides, and the complexity of the project.</p>
+        <div class="contact-email">
+            Please write to us at <strong>open@qadrum.com</strong> with your requirements.
+        </div>
+    </div>
+</div>
+
+  <!-- Notification System -->
+  <div id="notificationSystem"></div>
+
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  
+  <!-- Dodatkowy skrypt JS dla obsługi nowych funkcji -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obsługa pola awatara użytkownika - otwarcie okna wyboru pliku po kliknięciu
+        const userAvatar = document.getElementById('userAvatar');
+        
+        if (userAvatar) {
+            // Funkcjonalność awatara jest obsługiwana w main.js przez initializeAvatarFunctionality()
+            console.log("Avatar element found, functionality will be initialized by main.js");
+        }
+        
+        // Dodanie domyślnego podpowiedzi dla pola tekstowego "Company Purpose"
+        const categoryPlaceholdersMap = {
+            "Company Purpose": "Define your company or business in a clear, concise sentence that captures its essence and mission."
+        };
+        
+        // Obsługa kliknięcia w kategorię "Company Purpose"
+        const companyPurposeItem = document.querySelector('.category-item[data-category="Company Purpose"]');
+        if (companyPurposeItem) {
+            companyPurposeItem.addEventListener('click', function() {
+                const chatInput = document.querySelector('.chat-input');
+                if (chatInput) {
+                    chatInput.placeholder = categoryPlaceholdersMap["Company Purpose"];
+                }
+                
+                // Tutaj potrzebne może być dodatkowe wywołanie funkcji, która jest już zdefiniowana w main.js
+                // dla obsługi wyboru kategorii, np.:
+                // selectCategory("Company Purpose");
+            });
+        }
+        
+        // Obsługa przycisku "New Chat" - ustawienie bardziej ogólnego placeholdera
+        const newChatBtn = document.querySelector('.new-chat-btn');
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', function() {
+                const chatInput = document.querySelector('.chat-input');
+                if (chatInput) {
+                    // Bardziej ogólny placeholder dla trybu New Chat
+                    chatInput.placeholder = "Hi! I'm Deckster, your AI pitch deck assistant. How can I help you today?";
+                }
+                
+                // Tutaj potrzebne może być dodatkowe wywołanie funkcji, która jest już zdefiniowana w main.js
+                // dla obsługi nowego czatu, np.:
+                // startNewChat();
+            });
+        }
+    });
+  </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('fileInput');
+            const dropArea = document.getElementById('dropArea');
+            const fileList = document.getElementById('fileList');
+            const uploadNewFileBtn = document.getElementById('uploadNewFileBtn');
+            const attachButtons = [document.getElementById('attachButton'), document.getElementById('mainAttachButton')];
+
+            // Trigger file dialog on attach buttons
+            attachButtons.forEach(btn => {
+                if (btn) {
+                    btn.addEventListener('click', () => fileInput.click());
+                }
+            });
+
+            // Trigger file dialog from upload panel
+            if (uploadNewFileBtn) {
+                uploadNewFileBtn.addEventListener('click', () => fileInput.click());
+            }
+
+            // Handle file selection
+            fileInput.addEventListener('change', handleFiles);
+
+            // Handle drag & drop
+            ;['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    dropArea.classList.add('highlight');
+                }, false);
+            });
+
+            ;['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    dropArea.classList.remove('highlight');
+                }, false);
+            });
+
+            dropArea.addEventListener('drop', e => {
+                e.preventDefault();
+                handleFiles({ target: { files: e.dataTransfer.files } });
+            });
+
+            // File handler
+            function handleFiles(e) {
+                const files = e.target.files;
+                for (const file of files) {
+                    uploadFile(file);
+                }
+            }
+
+            // Upload to backend
+            async function uploadFile(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const listItem = document.createElement('div');
+                listItem.className = 'file-item';
+                listItem.innerText = `${file.name} (uploading...)`;
+                fileList.appendChild(listItem);
+
+                try {
+                    const res = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        listItem.innerText = `${file.name}`;
+                        listItem.dataset.fileUrl = data.url;
+                        listItem.addEventListener('click', () => previewFile(data.url, file.name));
+                    } else {
+                        listItem.innerText = `${file.name} (upload failed)`;
+                    }
+                } catch (err) {
+                    listItem.innerText = `${file.name} (error)`;
+                }
+            }
+
+            // File preview logic
+            function previewFile(url, filename) {
+                const modal = document.getElementById('filePreviewModal');
+                const content = document.getElementById('filePreviewContent');
+                const title = document.getElementById('previewFileName');
+                const downloadBtn = document.getElementById('downloadPreviewedFileBtn');
+
+                title.innerText = filename;
+                content.innerHTML = `<iframe src="${url}" style="width:100%; height:400px;"></iframe>`;
+                downloadBtn.onclick = () => window.open(url, '_blank');
+
+                modal.style.display = 'flex';
+            }
+
+            // Close preview
+            document.getElementById('closeFilePreviewBtn').addEventListener('click', () => {
+                document.getElementById('filePreviewModal').style.display = 'none';
+            });
+        });
+    </script>
+
+</body>
+</html>
